@@ -5,14 +5,14 @@ defmodule DojoWeb.FractalLiveTest do
 
   alias DojoWeb.FractalLive
 
-  test "opens on mission 1 with later missions locked", %{conn: conn} do
+  test "opens on the square mission with later missions locked", %{conn: conn} do
     {:ok, view, html} = live(conn, "/fractal")
-    assert html =~ "Draw a triangle"
-    assert has_element?(view, ~s|#fx-tabs button[data-locked]|, "Hexagon")
+    assert html =~ "Complete the square"
+    assert has_element?(view, ~s|#fx-tabs button[data-locked]|, "Triangle")
 
     html = view |> element(~s|#fx-tabs button[phx-value-level="1"]|) |> render_click()
-    refute html =~ "Draw a hexagon"
-    assert_push_event(view, "toast", %{text: "Finish Triangle first."})
+    refute html =~ "Draw a triangle"
+    assert_push_event(view, "toast", %{text: "Finish Square first."})
   end
 
   test "solving, then the quiz, unlocks the next mission and earns xp", %{conn: conn} do
@@ -24,14 +24,14 @@ defmodule DojoWeb.FractalLiveTest do
     assert_push_event(view, "save", %{done: 1, xp: 100})
 
     html = view |> element("button", "continue") |> render_click()
-    assert html =~ "Why rt 120 and not rt 60?"
+    assert html =~ "Why does every corner of the square use rt 90?"
 
     html = view |> element(~s|.fx-opt[phx-value-i="0"]|) |> render_click()
     assert html =~ "(+50 xp)"
     assert html =~ "150xp"
 
-    html = view |> element("button", "next: hexagon") |> render_click()
-    assert html =~ "Draw a hexagon"
+    html = view |> element("button", "next: triangle") |> render_click()
+    assert html =~ "Draw a triangle"
     assert_push_event(view, "level", %{index: 1})
   end
 
@@ -62,6 +62,12 @@ defmodule DojoWeb.FractalLiveTest do
     html = view |> element("button", "stuck? get a hint") |> render_click()
     assert html =~ "hint 1/3"
     assert html =~ ~s|<code class="text-lint-commands">fw 100</code>|
+  end
+
+  test "the square mission opens with its half-drawn starter code", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/fractal")
+    render_hook(view, "restore", %{"done" => 0, "xp" => 0})
+    assert_push_event(view, "level", %{index: 0, starter: "fw 100\nrt 90\nfw 100\nrt 90\n"})
   end
 
   test "restore clamps progress from the browser", %{conn: conn} do

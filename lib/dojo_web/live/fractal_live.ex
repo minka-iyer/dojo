@@ -1,7 +1,8 @@
 defmodule DojoWeb.FractalLive do
   @moduledoc """
-  Fractal Challenge: a five-mission course inside Dojo, from one line to a
-  snowflake fractal (triangle, hexagon, circle, spiral, snowflake).
+  Fractal Challenge: a six-mission course inside Dojo, from finishing a
+  half-drawn square to a snowflake fractal (square, triangle, hexagon,
+  circle, spiral, snowflake).
 
   Ported from github.com/minka-iyer/fractal-challenge. That demo had its own
   editor and interpreter; here the editor is Dojo's CM6 PaperLang editor, the
@@ -213,6 +214,7 @@ defmodule DojoWeb.FractalLive do
       index: i,
       solution: level["solution"],
       tolerance: level["tolerance"],
+      starter: level["starter"] || "",
       placeholder: level["try"]
     })
   end

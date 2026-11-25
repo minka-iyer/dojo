@@ -23,7 +23,9 @@ import { checkLevel, ghostProgram, runDojo } from "../fractal/check.js"
 
 let cm6 = null
 
-const STORAGE_PREFIX = "@paperlands.fractal@"
+// v2: a square mission was added in front (2026-11-25), so mission numbers
+// shifted. A new prefix keeps old saves from loading into the wrong mission.
+const STORAGE_PREFIX = "@paperlands.fractal.v2@"
 const RUN_DELAY_MS = 650 // code runs by itself shortly after typing stops
 
 const store = {
@@ -152,14 +154,16 @@ const FractalCourse = {
         reapplyCompartments(view, compartments, cm6, "abbott", themes)
 
         // --- Server events ---
-        this.handleEvent("level", ({ index, solution, tolerance, placeholder }) => {
+        this.handleEvent("level", ({ index, solution, tolerance, placeholder, starter }) => {
             Object.assign(level, { index, solution, tolerance, placeholder })
             level.ghostBounds = boundsOf(runDojo(solution).paths)
             userMovedCamera = false
-            lastRan = null
             drawGhost()
-            setContent(view, store.load(`code${index}`) ?? "")
-            run(getContent(view))
+            setContent(view, store.load(`code${index}`) ?? (starter || ""))
+            // Code loaded on opening (starter or saved) is not a new attempt:
+            // it earns no xp and does not count as a miss towards hints.
+            lastRan = getContent(view)
+            run(lastRan)
         })
 
         // The Command Deck, exactly as in the shell: resolve the card's
@@ -176,7 +180,7 @@ const FractalCourse = {
         })
 
         this.handleEvent("clear-code", () => {
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 20; i++) {
                 try { localStorage.removeItem(`${STORAGE_PREFIX}code${i}`) } catch { /* private mode */ }
             }
         })

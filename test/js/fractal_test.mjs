@@ -15,8 +15,8 @@ const L = (n) => levels[n - 1]
 const pass = (n, code) => checkLevel(code, L(n).solution, L(n).tolerance).pass
 
 describe("levels.json", () => {
-    test("five levels, each solution runs cleanly in Dojo and draws", () => {
-        assert.equal(levels.length, 5)
+    test("six levels, each solution runs cleanly in Dojo and draws", () => {
+        assert.equal(levels.length, 6)
         for (const lv of levels) {
             const r = runDojo(lv.solution)
             assert.equal(r.error, null, lv.tab)
@@ -54,61 +54,77 @@ describe("levels.json", () => {
     })
 })
 
+describe("square", () => {
+    test("the starter alone is only half a square", () => {
+        assert.ok(L(1).starter)
+        assert.ok(!pass(1, L(1).starter))
+    })
+    test("finishing the starter counts, in any size or direction", () => {
+        assert.ok(pass(1, L(1).starter + "fw 100\nrt 90\nfw 100\n"))
+        assert.ok(pass(1, "loop 4 do\n  fw 30\n  lt 90\nend"))
+    })
+    test("three sides, a rectangle or a triangle do not", () => {
+        assert.ok(!pass(1, L(1).starter + "fw 100\n"))
+        assert.ok(!pass(1, "fw 200\nrt 90\nfw 100\nrt 90\nfw 200\nrt 90\nfw 100"))
+        assert.ok(!pass(1, L(2).solution))
+    })
+})
+
 describe("triangle", () => {
     test("smaller, turned or left-handed triangles count", () => {
-        assert.ok(pass(1, "fw 50\nlt 120\nfw 50\nlt 120\nfw 50"))
-        assert.ok(pass(1, "rt 30\nfw 100\nrt 120\nfw 100\nrt 120\nfw 100"))
-        assert.ok(pass(1, "loop 3 do\n  fw 70\n  rt 120\nend"))
+        assert.ok(pass(2, "fw 50\nlt 120\nfw 50\nlt 120\nfw 50"))
+        assert.ok(pass(2, "rt 30\nfw 100\nrt 120\nfw 100\nrt 120\nfw 100"))
+        assert.ok(pass(2, "loop 3 do\n  fw 70\n  rt 120\nend"))
     })
     test("wrong angle, missing side or a square do not", () => {
-        assert.ok(!pass(1, "fw 100\nrt 110\nfw 100\nrt 110\nfw 100"))
-        assert.ok(!pass(1, "fw 100\nrt 120\nfw 100"))
-        assert.ok(!pass(1, "loop 4 do\n  fw 100\n  rt 90\nend"))
+        assert.ok(!pass(2, "fw 100\nrt 110\nfw 100\nrt 110\nfw 100"))
+        assert.ok(!pass(2, "fw 100\nrt 120\nfw 100"))
+        assert.ok(!pass(2, "loop 4 do\n  fw 100\n  rt 90\nend"))
     })
 })
 
 describe("hexagon", () => {
     test("any size hexagon counts, a pentagon does not", () => {
-        assert.ok(pass(2, "loop 6 do\n  fw 40\n  lt 60\nend"))
-        assert.ok(!pass(2, "loop 5 do\n  fw 100\n  rt 72\nend"))
-        assert.ok(!pass(2, "loop 6 do\n  fw 100\n  rt 50\nend"))
+        assert.ok(pass(3, "loop 6 do\n  fw 40\n  lt 60\nend"))
+        assert.ok(!pass(3, "loop 5 do\n  fw 100\n  rt 72\nend"))
+        assert.ok(!pass(3, "loop 6 do\n  fw 100\n  rt 50\nend"))
     })
 })
 
 describe("circle", () => {
     test("many small sides count, a hexagon or half circle do not", () => {
-        assert.ok(pass(3, "loop 360 do\n  fw 1\n  rt 1\nend"))
-        assert.ok(pass(3, "loop 12 do\n  fw 30\n  rt 30\nend"))
-        assert.ok(!pass(3, "loop 6 do\n  fw 100\n  rt 60\nend"))
-        assert.ok(!pass(3, "loop 18 do\n  fw 10\n  rt 10\nend"))
+        assert.ok(pass(4, "loop 360 do\n  fw 1\n  rt 1\nend"))
+        assert.ok(pass(4, "loop 12 do\n  fw 30\n  rt 30\nend"))
+        assert.ok(!pass(4, "loop 6 do\n  fw 100\n  rt 60\nend"))
+        assert.ok(!pass(4, "loop 18 do\n  fw 10\n  rt 10\nend"))
     })
 })
 
 describe("spiral", () => {
     test("same growth at any scale counts, too few turns do not", () => {
-        assert.ok(pass(4, "def grow size do\n  fw size\n  rt 90\nend\nloop 1 do\n  grow 10\n  grow 20\n  grow 30\n  grow 40\n  grow 50\n  grow 60\n  grow 70\n  grow 80\nend"))
-        assert.ok(!pass(4, "def grow size do\n  fw size\n  rt 90\nend\ngrow 20\ngrow 40\ngrow 60\ngrow 80\ngrow 100\ngrow 120"))
-        assert.ok(!pass(4, "loop 4 do\n  fw 100\n  rt 90\nend"))
+        assert.ok(pass(5, "def grow size do\n  fw size\n  rt 90\nend\nloop 1 do\n  grow 10\n  grow 20\n  grow 30\n  grow 40\n  grow 50\n  grow 60\n  grow 70\n  grow 80\nend"))
+        assert.ok(!pass(5, "def grow size do\n  fw size\n  rt 90\nend\ngrow 20\ngrow 40\ngrow 60\ngrow 80\ngrow 100\ngrow 120"))
+        assert.ok(!pass(5, "loop 4 do\n  fw 100\n  rt 90\nend"))
     })
 })
 
 describe("snowflake", () => {
-    const snow = (stop, size = 180) => L(5).solution
+    const snow = (stop, size = 180) => L(6).solution
         .replace("size < 25", `size < ${stop}`)
         .replace("size >= 25", `size >= ${stop}`)
         .replace("edge 180", `edge ${size}`)
 
     test("same depth at another size counts, and so does one level deeper", () => {
-        assert.ok(pass(5, snow(12.5, 90)))
-        assert.ok(pass(5, snow(10)))
+        assert.ok(pass(6, snow(12.5, 90)))
+        assert.ok(pass(6, snow(10)))
     })
     test("too shallow or a plain triangle does not", () => {
-        assert.ok(!pass(5, snow(61)))
-        assert.ok(!pass(5, L(1).solution))
+        assert.ok(!pass(6, snow(61)))
+        assert.ok(!pass(6, L(2).solution))
     })
     test("a command that never stops fails fast with a friendly message", () => {
         const t = Date.now()
-        const r = checkLevel("def edge size do\n  edge size/3\n  edge size/3\nend\nedge 90", L(5).solution)
+        const r = checkLevel("def edge size do\n  edge size/3\n  edge size/3\nend\nedge 90", L(6).solution)
         assert.equal(r.status, "error")
         assert.match(r.message, /way to stop/)
         assert.ok(Date.now() - t < 2000)
@@ -117,9 +133,9 @@ describe("snowflake", () => {
 
 describe("messages", () => {
     test("empty, nothing drawn, and unknown names", () => {
-        assert.equal(checkLevel("  ", L(1).solution).status, "empty")
-        assert.equal(checkLevel("rt 90", L(1).solution).status, "nothing")
-        const r = checkLevel("def grow size do\n  when sise < 3 do\n    fw size\n  end\nend\ngrow 10", L(4).solution)
+        assert.equal(checkLevel("  ", L(2).solution).status, "empty")
+        assert.equal(checkLevel("rt 90", L(2).solution).status, "nothing")
+        const r = checkLevel("def grow size do\n  when sise < 3 do\n    fw size\n  end\nend\ngrow 10", L(5).solution)
         assert.equal(r.status, "error")
         assert.match(r.message, /sise/)
     })
