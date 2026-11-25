@@ -1,5 +1,7 @@
-// Fractal Challenge course page (/fractal): Dojo's own editor (CM6 +
-// PaperLang mode) and Dojo's own turtle, with the course flow on the server.
+// Fractal Challenge course page (/fractal): the Dojo shell's own UI, editor
+// (CM6 + PaperLang mode) and turtle, with the course flow on the server.
+// The real Command Deck (DojoWeb.DeckLive) writes into the editor through the
+// same "writeShell" event and the same terminal/operations.js the shell uses.
 //
 // Built like the Polygon Lab hook: the editor comes from terminal/extensions.js
 // and terminal/view.js without tabs or the shared buffer store, so course code
@@ -16,6 +18,7 @@ import { buildExtensions, reapplyCompartments } from "../terminal/extensions.js"
 import { createInnerView, getContent, setContent } from "../terminal/view.js"
 import { themes } from "../editor/theme.js"
 import { temporal } from "../utils/temporal.js"
+import { execute as writeToEditor } from "../terminal/operations.js"
 import { checkLevel, ghostProgram, runDojo } from "../fractal/check.js"
 
 let cm6 = null
@@ -53,10 +56,8 @@ const FractalCourse = {
         const root = this.el
         const canvas = document.getElementById("fx-canvas")
         const textarea = root.querySelector("#fx-editor")
-        const consoleBox = root.querySelector("#fx-console")
-        const consoleText = root.querySelector("#fx-console-text")
-        const toastBox = root.querySelector("#fx-toast")
-        const xpFloat = root.querySelector("#fx-xp-float")
+        const statusLine = root.querySelector("#fx-status")
+        const statusText = root.querySelector("#fx-status-text")
 
         const level = { index: 0, solution: "", tolerance: undefined, placeholder: "", ghostBounds: null }
         let lastRan = null
@@ -78,17 +79,16 @@ const FractalCourse = {
             const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2
             const W = window.innerWidth, H = window.innerHeight
             const tanH = Math.tan((camera.fov * Math.PI) / 360)
-            const left = root.querySelector(".fx-main")?.getBoundingClientRect()
-            const deck = root.querySelector(".fx-deck")?.getBoundingClientRect()
-            let freeL = 0, freeR = W, freeT = 0, freeB = H
-            if (W >= 900) {
-                freeL = left ? left.right : 0
-                freeR = deck ? deck.left : W
-            } else {
-                // Phones: the band between the top bar and the mission card.
-                const top = root.querySelector(".fx-topbar")?.getBoundingClientRect()
-                freeT = top ? Math.max(0, top.bottom) : 0
-                freeB = left ? Math.min(H, Math.max(freeT + 160, left.top)) : H * 0.42
+            const rect = (sel) => document.querySelector(sel)?.getBoundingClientRect()
+            const left = rect("#fx-lefthird"), deck = rect("#commanddeck"), card = rect("#fx-mission")
+            const deckOpen = deck && deck.width > 0
+            let freeL = left ? left.right : 0
+            let freeR = deckOpen ? deck.left : W
+            let freeT = 40, freeB = card && card.height > 0 ? card.top : H
+            if (W < 1024) {
+                // Below lg the shell stacks: drawing in the middle column band.
+                freeL = left ? Math.min(left.right, W * 0.4) : 0
+                freeR = deckOpen ? Math.max(freeL + 120, deck.left) : W
             }
             const fw = Math.max(200, freeR - freeL), fh = Math.max(160, freeB - freeT)
             const distance = Math.max(span / (2 * tanH * (fh / H)), span / (2 * tanH * (fw / H)))
@@ -101,9 +101,11 @@ const FractalCourse = {
             turtle.requestRender()
         }
 
+        // Status in the nerve HUD's channels: output (good), error, system.
+        const CHANNEL = { solved: "nerve-output", error: "nerve-error" }
         const say = (status, message) => {
-            consoleBox.dataset.status = status
-            consoleText.textContent = message
+            statusLine.className = `nerve-hud-status-line ${CHANNEL[status] || "nerve-system"}`
+            statusText.textContent = message
         }
 
         const drawGhost = () => {
@@ -160,17 +162,17 @@ const FractalCourse = {
             run(getContent(view))
         })
 
-        this.handleEvent("insert", ({ text }) => {
-            const { from, to } = view.state.selection.main
-            const line = view.state.doc.lineAt(from)
-            const atLineStart = from === line.from
-            const prefix = atLineStart ? "" : "\n"
-            const insert = prefix + text + "\n"
-            view.dispatch({
-                changes: { from, to, insert },
-                selection: { anchor: from + insert.length },
-            })
-            view.focus()
+        // The Command Deck, exactly as in the shell: resolve the card's
+        // argument inputs, then write through terminal/operations.js.
+        this.handleEvent("writeShell", ({ command, control, args = [] }) => {
+            const cmd = command || control
+            const resolved = args.map((arg) => {
+                if (typeof arg === "number") return arg
+                const el = document.getElementById(`cmdparam-${cmd}-${arg}`)
+                return el?.value || el?.getAttribute("defaulted") || arg || ""
+            }).filter((v) => v !== "?")
+            writeToEditor(view, command ? { command, args: resolved, batch: false } : { control, args: resolved }, cm6)
+            if (cmd && cmd !== "undo") this.pushEvent("deck", { cmd })
         })
 
         this.handleEvent("clear-code", () => {
@@ -183,20 +185,7 @@ const FractalCourse = {
             store.save("progress", JSON.stringify({ done, xp }))
         })
 
-        let toastTimer = null
-        this.handleEvent("toast", ({ text }) => {
-            toastBox.textContent = text
-            toastBox.dataset.on = "true"
-            clearTimeout(toastTimer)
-            toastTimer = setTimeout(() => delete toastBox.dataset.on, 2200)
-        })
-
-        this.handleEvent("xp", ({ n }) => {
-            const f = document.createElement("span")
-            f.textContent = `+${n} xp`
-            xpFloat.append(f)
-            setTimeout(() => f.remove(), 1300)
-        })
+        this.handleEvent("toast", ({ text }) => say("note", text))
 
         // Restore progress kept in this browser (the server clamps the numbers).
         let saved = {}

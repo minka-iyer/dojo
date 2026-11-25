@@ -16,6 +16,8 @@ defmodule DojoWeb.FractalLive do
   """
   use DojoWeb, :live_shell
 
+  import DojoWeb.SVGComponents, only: [manual: 1]
+
   @levels_path Path.join([__DIR__, "..", "..", "..", "priv", "fractal", "levels.json"])
                |> Path.expand()
   @external_resource @levels_path
@@ -46,6 +48,7 @@ defmodule DojoWeb.FractalLive do
         commands: @commands,
         count: @count,
         dojo_url: @dojo_url,
+        locale: "en",
         done: 0,
         xp: 0
       )
@@ -111,9 +114,10 @@ defmodule DojoWeb.FractalLive do
 
   def handle_event("run", _params, socket), do: {:noreply, socket}
 
-  def handle_event("deck", %{"cmd" => cmd}, socket) when is_map_key(@commands, cmd) do
-    socket = push_event(socket, "insert", %{text: @commands[cmd]["example"]})
-
+  # The hook reports each Command Deck card the student uses (the deck itself
+  # writes into the editor, exactly as in the shell). First use earns a little xp.
+  def handle_event("deck", %{"cmd" => cmd}, socket)
+      when is_binary(cmd) and byte_size(cmd) <= 16 do
     socket =
       if MapSet.member?(socket.assigns.used_cmds, cmd) do
         socket
@@ -278,19 +282,39 @@ defmodule DojoWeb.FractalLive do
 
   defp clamp_int(_v, lo, _hi), do: lo
 
+  # Commands a mission introduces, shown on the mission card.
+  def new_commands(level) do
+    for %{"c" => c} = d <- level["deck"], d["new"], do: c
+  end
+
+  attr :primary, :boolean, default: false
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  # A text button in the Dojo shell's style (font-mono, accent border).
+  def fx_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "px-3 py-1 font-mono text-sm border-1 rounded-sm transition-all duration-300 cursor-pointer hover:scale-105 touch-manipulation",
+        @primary && "border-primary text-primary hover:bg-primary/20",
+        !@primary && "border-accent text-primary-content hover:bg-accent/50"
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
   # Text with `code` spans, for hints and goals. Phoenix escapes each part.
   def rich(assigns) do
     parts = assigns.text |> String.split("`") |> Enum.with_index()
     assigns = assign(assigns, :parts, parts)
 
     ~H"""
-    <%= for {part, i} <- @parts do %>
-      <%= if rem(i, 2) == 1 do %>
-        <code>{part}</code>
-      <% else %>
-        {part}
-      <% end %>
-    <% end %>
+    <span phx-no-format><%= for {part, i} <- @parts do %><%= if rem(i, 2) == 1 do %><code class="text-lint-commands">{part}</code><% else %>{part}<% end %><% end %></span>
     """
   end
 end

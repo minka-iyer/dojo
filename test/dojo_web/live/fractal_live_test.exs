@@ -8,9 +8,9 @@ defmodule DojoWeb.FractalLiveTest do
   test "opens on mission 1 with later missions locked", %{conn: conn} do
     {:ok, view, html} = live(conn, "/fractal")
     assert html =~ "Draw a triangle"
-    assert has_element?(view, ~s|.fx-tab[data-state="locked"]|, "Hexagon")
+    assert has_element?(view, ~s|#fx-tabs button[data-locked]|, "Hexagon")
 
-    html = view |> element(~s|.fx-tab[phx-value-level="1"]|) |> render_click()
+    html = view |> element(~s|#fx-tabs button[phx-value-level="1"]|) |> render_click()
     refute html =~ "Draw a hexagon"
     assert_push_event(view, "toast", %{text: "Finish Triangle first."})
   end
@@ -19,17 +19,18 @@ defmodule DojoWeb.FractalLiveTest do
     {:ok, view, _html} = live(conn, "/fractal")
 
     html = render_hook(view, "run", %{"pass" => true, "drew" => true, "fresh" => true})
-    assert html =~ "You <em>did</em> it"
+    assert html =~ "You did it"
+    assert has_element?(view, "#commanddeck")
     assert_push_event(view, "save", %{done: 1, xp: 100})
 
-    html = view |> element("button", "Continue") |> render_click()
+    html = view |> element("button", "continue") |> render_click()
     assert html =~ "Why rt 120 and not rt 60?"
 
     html = view |> element(~s|.fx-opt[phx-value-i="0"]|) |> render_click()
     assert html =~ "(+50 xp)"
-    assert html =~ "150 xp"
+    assert html =~ "150xp"
 
-    html = view |> element("button", "Next: Hexagon") |> render_click()
+    html = view |> element("button", "next: hexagon") |> render_click()
     assert html =~ "Draw a hexagon"
     assert_push_event(view, "level", %{index: 1})
   end
@@ -37,47 +38,45 @@ defmodule DojoWeb.FractalLiveTest do
   test "a wrong first answer loses the quiz bonus", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/fractal")
     render_hook(view, "run", %{"pass" => true, "drew" => true, "fresh" => true})
-    view |> element("button", "Continue") |> render_click()
+    view |> element("button", "continue") |> render_click()
 
     html = view |> element(~s|.fx-opt[phx-value-i="1"]|) |> render_click()
     assert html =~ "Not quite. Try another one."
 
     html = view |> element(~s|.fx-opt[phx-value-i="0"]|) |> render_click()
     refute html =~ "(+50 xp)"
-    assert html =~ "100 xp"
+    assert html =~ "100xp"
   end
 
   test "hints appear after two fresh failed runs", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/fractal")
-    refute render(view) =~ "Stuck? Get a hint"
+    refute render(view) =~ "stuck? get a hint"
 
     render_hook(view, "run", %{"pass" => false, "drew" => true, "fresh" => true})
     # The second fail inside the 12 s cooldown does not count...
     refute render_hook(view, "run", %{"pass" => false, "drew" => true, "fresh" => true}) =~
-             "Stuck?"
+             "stuck?"
 
     # ...but the 60 s timer still opens hints.
     send(view.pid, {:hint_ready, :sys.get_state(view.pid).socket.assigns.level_token})
-    html = view |> element("button", "Stuck? Get a hint") |> render_click()
-    assert html =~ "Hint 1 of 3"
-    assert html =~ "<code>fw 100</code>"
+    html = view |> element("button", "stuck? get a hint") |> render_click()
+    assert html =~ "hint 1/3"
+    assert html =~ ~s|<code class="text-lint-commands">fw 100</code>|
   end
 
   test "restore clamps progress from the browser", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/fractal")
     html = render_hook(view, "restore", %{"done" => 99, "xp" => -5})
     assert html =~ "Draw a snowflake fractal"
-    assert html =~ "0 xp"
-    refute has_element?(view, ~s|.fx-tab[data-state="locked"]|)
+    assert html =~ "0xp"
+    refute has_element?(view, ~s|#fx-tabs button[data-locked]|)
   end
 
-  test "the deck inserts the command and gives xp once", %{conn: conn} do
+  test "using a Command Deck card gives xp once", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/fractal")
-    view |> element(~s|.fx-cmd[phx-value-cmd="fw"]|) |> render_click()
-    assert_push_event(view, "insert", %{text: "fw 50"})
-    assert render(view) =~ "2 xp"
-    view |> element(~s|.fx-cmd[phx-value-cmd="fw"]|) |> render_click()
-    assert render(view) =~ "2 xp"
+    assert render_hook(view, "deck", %{"cmd" => "fw"}) =~ "2xp"
+    assert render_hook(view, "deck", %{"cmd" => "fw"}) =~ "2xp"
+    assert render_hook(view, "deck", %{"cmd" => "rt"}) =~ "4xp"
   end
 
   test "player levels follow the original xp curve" do
