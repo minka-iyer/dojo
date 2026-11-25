@@ -1,0 +1,184 @@
+<%!-- Fractal Challenge. Look follows Design.md in the Paperland vault:
+      dark ground, cream ink, saffron accent, serif voice for the lesson,
+      Dojo's shell look for code. --%>
+<canvas phx-update="ignore" id="fx-canvas" class="fx-canvas" aria-label="Turtle drawing"></canvas>
+
+<% level = Enum.at(@levels, @cur) %>
+<% player = level_of(@xp) %>
+<% lo = xp_for(player) %>
+<% hi = xp_for(player + 1) %>
+
+<div id="fx" class="fx" phx-hook="FractalCourse">
+  <header class="fx-topbar">
+    <p class="fx-wordmark">Fractal Challenge</p>
+    <nav class="fx-tabs" aria-label="Missions">
+      <button
+        :for={{lv, i} <- Enum.with_index(@levels)}
+        type="button"
+        class="fx-tab"
+        phx-click="open"
+        phx-value-level={i}
+        aria-current={if i == @cur, do: "step"}
+        data-state={
+          cond do
+            i < @done -> "done"
+            i > @done -> "locked"
+            true -> "open"
+          end
+        }
+        title={if i > @done, do: "Finish the mission before to unlock", else: lv["title"]}
+      >
+        <span class="fx-tab-n">{i + 1}</span>
+        {lv["tab"]}
+      </button>
+    </nav>
+    <div class="fx-xp" aria-label="Level and experience">
+      <div class="fx-xp-badge"><small>Level</small><b>{player}</b></div>
+      <div class="fx-xp-main">
+        <div class="fx-xp-row">
+          <span>{@xp} xp</span><span>{hi - @xp} to next</span>
+        </div>
+        <div class="fx-xp-track">
+          <i style={"width: #{round(100 * (@xp - lo) / (hi - lo))}%"}></i>
+        </div>
+      </div>
+      <span id="fx-xp-float" class="fx-xp-float" phx-update="ignore"></span>
+    </div>
+  </header>
+
+  <div class="fx-main">
+    <section class="fx-panel" aria-live="polite">
+      <%= case @phase do %>
+        <% :play -> %>
+          <p class="fx-kicker">Mission {level["id"]} of {@count}</p>
+          <h1 class="fx-title">{level["title"]}</h1>
+          <p class="fx-tagline">{level["tagline"]}</p>
+          <p class="fx-body"><.rich text={level["goal"]} /></p>
+          <%= if @hint_ready do %>
+            <div :if={@hint_step > 0} class="fx-hint">
+              <p class="fx-kicker">Hint {@hint_step} of {length(level["hints"])}</p>
+              <p><.rich text={Enum.at(level["hints"], @hint_step - 1)} /></p>
+            </div>
+            <button
+              :if={@hint_step < length(level["hints"])}
+              type="button"
+              class="fx-link"
+              phx-click="hint"
+            >
+              {if @hint_step == 0, do: "Stuck? Get a hint", else: "Need another hint?"}
+            </button>
+          <% end %>
+        <% :solved -> %>
+          <p class="fx-kicker">Mission {level["id"]} of {@count}</p>
+          <h1 class="fx-title">You <em>did</em> it</h1>
+          <p class="fx-body">
+            {if @first,
+              do: "+100 xp. One quick question before the next mission.",
+              else: "Nice, you matched it again."}
+          </p>
+          <div class="fx-row">
+            <button type="button" class="fx-btn fx-btn--primary" phx-click="continue">
+              Continue
+            </button>
+            <button type="button" class="fx-btn" phx-click="keep-playing">Keep playing</button>
+          </div>
+        <% :quiz -> %>
+          <% quiz = level["quiz"] %>
+          <p class="fx-kicker">Why does this work?</p>
+          <h1 class="fx-title fx-title--small">{quiz["q"]}</h1>
+          <div class="fx-quiz">
+            <button
+              :for={{opt, i} <- quiz_order(quiz["options"], @cur)}
+              type="button"
+              class="fx-opt"
+              phx-click="answer"
+              phx-value-i={i}
+              data-state={
+                cond do
+                  @answered and i == quiz["correct"] -> "right"
+                  MapSet.member?(@wrong, i) -> "wrong"
+                  true -> nil
+                end
+              }
+              disabled={@answered or MapSet.member?(@wrong, i)}
+            >
+              <.rich text={opt} />
+            </button>
+          </div>
+          <p class="fx-body fx-small">
+            <%= cond do %>
+              <% @answered -> %>
+                <.rich text={quiz["why"]} />{if @bonus, do: " (+50 xp)"}
+              <% MapSet.size(@wrong) > 0 -> %>
+                Not quite. Try another one.
+              <% true -> %>
+                Pick one answer.
+            <% end %>
+          </p>
+          <div :if={@answered} class="fx-row">
+            <button type="button" class="fx-btn fx-btn--primary" phx-click="next">
+              {if @cur < @count - 1,
+                do: "Next: #{Enum.at(@levels, @cur + 1)["tab"]}",
+                else: "Finish"}
+            </button>
+          </div>
+        <% :finished -> %>
+          <p class="fx-kicker">All {@count} missions</p>
+          <h1 class="fx-title"><em>Fractal!</em></h1>
+          <p class="fx-body">
+            You went from one line to a command that calls itself. Your code is real Dojo code, so you can take it into the full Dojo shell.
+          </p>
+          <div class="fx-row">
+            <a class="fx-btn fx-btn--primary" href={@dojo_url} target="_blank" rel="noopener">
+              Open the full Dojo ↗
+            </a>
+            <button type="button" class="fx-btn" phx-click="restart">Start again</button>
+          </div>
+      <% end %>
+    </section>
+
+    <div class="fx-editor-frame">
+      <span class="fx-corner fx-corner--tl" aria-hidden="true"></span>
+      <span class="fx-corner fx-corner--tr" aria-hidden="true"></span>
+      <span class="fx-corner fx-corner--bl" aria-hidden="true"></span>
+      <span class="fx-corner fx-corner--br" aria-hidden="true"></span>
+      <div class="fx-editor" phx-update="ignore" id="fx-editor-host">
+        <textarea id="fx-editor" aria-label="Your turtle code"></textarea>
+      </div>
+    </div>
+    <div
+      id="fx-console"
+      class="fx-console"
+      phx-update="ignore"
+      data-status="empty"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="fx-prompt">dojo shell &gt;</span> <span id="fx-console-text">ready</span>
+    </div>
+  </div>
+
+  <aside class="fx-deck" aria-label="Command deck">
+    <p class="fx-kicker">Command deck</p>
+    <ul>
+      <li :for={d <- level["deck"]}>
+        <% c = @commands[d["c"]] %>
+        <button
+          type="button"
+          class="fx-cmd"
+          phx-click="deck"
+          phx-value-cmd={d["c"]}
+          title={"Types \"#{c["example"] |> String.split("\n") |> hd()}\" into the editor"}
+        >
+          <span class="fx-cmd-name">
+            {c["name"]}<span :if={d["new"]} class="fx-new">new</span>
+          </span>
+          <code class="fx-cmd-ex">{c["label"]}</code>
+          <span :if={d["note"]} class="fx-cmd-note">{d["note"]}</span>
+        </button>
+      </li>
+    </ul>
+  </aside>
+
+  <div id="fx-toast" class="fx-toast" phx-update="ignore" role="status" aria-live="polite"></div>
+</div>

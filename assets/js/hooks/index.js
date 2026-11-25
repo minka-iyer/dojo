@@ -4,6 +4,7 @@ import Draggables from "./draggable.js";
 import Sensei from "./sensei.js";
 import DiscipleWindow from "./disciplewindow.js";
 import NerveHook from "./nerve.js";
+import FractalCourse from "./fractal.js";
 
 const Hooks = {
   Shell,
@@ -11,7 +12,8 @@ const Hooks = {
   Draggables,
   Sensei,
   DiscipleWindow,
-  NerveHook
+  NerveHook,
+  FractalCourse
 };
 
 export default Hooks;

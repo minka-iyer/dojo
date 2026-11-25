@@ -24,6 +24,7 @@ defmodule DojoWeb.Router do
       live("/book1", BookOneLive, :index)
       live("/shell", ShellLive, :index)
       live("/welcome", BootLive, :index)
+      live("/fractal", FractalLive, :index)
     end
   end
 

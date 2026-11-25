@@ -1,0 +1,139 @@
+{
+  "_about": "Fractal Challenge course for Dojo. Five missions, ported from github.com/minka-iyer/fractal-challenge (levels.js) into Dojo's own PaperLang: the turtle starts facing right, inputs are plain names (def grow size do), and Dojo's 'when' takes the place of if/else. Read by DojoWeb.FractalLive (copy) and by the browser hook (solution, for the ghost and the check). Optional per-level tolerance overrides the checker default (the circle is stricter so a hexagon does not count). No em dashes in copy.",
+  "commands": {
+    "fw": { "name": "Move forward", "example": "fw 50", "label": "fw 50" },
+    "rt": { "name": "Turn right", "example": "rt 30", "label": "rt 30" },
+    "lt": { "name": "Turn left", "example": "lt 30", "label": "lt 30" },
+    "loop": { "name": "Repeat steps", "example": "loop 6 do\n  fw 50\nend", "label": "loop 6 do ... end" },
+    "def": { "name": "Make your own", "example": "def grow size do\n  fw size\nend", "label": "def grow size do ... end" },
+    "when": { "name": "Only when", "example": "when size < 20 do\n  fw size\nend", "label": "when size < 20 do ... end" }
+  },
+  "levels": [
+    {
+      "id": 1,
+      "tab": "Triangle",
+      "title": "Draw a triangle",
+      "tagline": "Start with the turtle.",
+      "goal": "Make the turtle draw a triangle with three equal sides. Trace the faint shape.",
+      "try": "try fw 100",
+      "deck": [{ "c": "fw" }, { "c": "rt" }, { "c": "lt" }],
+      "solution": "fw 100\nrt 120\nfw 100\nrt 120\nfw 100\nrt 120\n",
+      "hints": [
+        "The turtle starts facing right. Start with a line: `fw 100`.",
+        "After each side the turtle has to turn before it draws the next one. Try `rt` after `fw 100`.",
+        "The outside turns of a closed shape add up to 360. Three corners: `fw 100`, then `rt` a third of 360, and repeat."
+      ],
+      "quiz": {
+        "q": "Why rt 120 and not rt 60?",
+        "options": [
+          "Three turns have to add up to one full circle, and 360 / 3 = 120.",
+          "Because the sides are 100 long.",
+          "rt 60 would work too, it just looks smaller."
+        ],
+        "correct": 0,
+        "why": "The turtle turns a full 360 by the time it gets back to the start. Split between 3 corners, that is 120 each."
+      }
+    },
+    {
+      "id": 2,
+      "tab": "Hexagon",
+      "title": "Draw a hexagon",
+      "tagline": "Six sides, one loop.",
+      "goal": "Six equal sides. Can you do it without typing fw six times?",
+      "try": "try loop 6 do",
+      "deck": [{ "c": "loop", "new": true }, { "c": "fw" }, { "c": "rt" }],
+      "solution": "loop 6 do\n  fw 100\n  rt 60\nend\n",
+      "hints": [
+        "Six equal sides means doing the same two things six times. `loop 6 do ... end` repeats what is inside.",
+        "Inside the loop: one line of `fw 100` and one turn. Do not forget `end`.",
+        "Six turns must add up to 360. So each turn is 360 / 6. Write `rt` with that number."
+      ],
+      "quiz": {
+        "q": "Why does a hexagon use rt 60 inside loop 6?",
+        "options": [
+          "6 turns of 60 make 360, one full turn.",
+          "Because 60 is the length of each side.",
+          "Any angle works as long as the loop is 6."
+        ],
+        "correct": 0,
+        "why": "To close the shape, the turns must add up to a full 360. 6 x 60 = 360."
+      }
+    },
+    {
+      "id": 3,
+      "tab": "Circle",
+      "title": "Draw a circle",
+      "tagline": "Tiny steps, tiny turns.",
+      "goal": "The turtle can only move in straight lines. How do you make something round?",
+      "try": "try loop 36 do",
+      "deck": [{ "c": "loop" }, { "c": "fw" }, { "c": "rt" }],
+      "solution": "loop 36 do\n  fw 10\n  rt 10\nend\n",
+      "tolerance": 0.04,
+      "hints": [
+        "A circle is a shape with a lot of very short sides. Use a loop with a big number, like `loop 36 do`.",
+        "Make each step short and each turn small. Try `fw 10` and a small `rt`.",
+        "Turns must add up to 360. If you loop 36 times, each turn is 360 / 36. Write `rt` with that."
+      ],
+      "quiz": {
+        "q": "Why do short steps and small turns look like a circle?",
+        "options": [
+          "The sides get so short that the corners look smooth.",
+          "The turtle switches to curved lines.",
+          "Because 36 is a magic number."
+        ],
+        "correct": 0,
+        "why": "More sides means shorter sides and smaller corners. With enough of them, your eyes see a curve."
+      }
+    },
+    {
+      "id": 4,
+      "tab": "Spiral",
+      "title": "Draw a spiral",
+      "tagline": "Start small, then grow.",
+      "goal": "Each line is a little longer than the one before. Make your own command that moves a bit further every time.",
+      "try": "try def grow size do",
+      "deck": [{ "c": "def", "new": true }, { "c": "loop" }, { "c": "fw" }, { "c": "rt" }],
+      "solution": "def grow size do\n  fw size\n  rt 90\nend\n\ngrow 20\ngrow 40\ngrow 60\ngrow 80\ngrow 100\ngrow 120\ngrow 140\ngrow 160\n",
+      "hints": [
+        "Make your own command with an input: `def grow size do ... end`. The input `size` is a number you pass in.",
+        "Inside, use `size` like a number: `fw size`, then a quarter turn. Call it like `grow 20`.",
+        "Now call `grow` again with a bigger number each time: `grow 20`, `grow 40`, `grow 60`, and keep going up to `grow 160`."
+      ],
+      "quiz": {
+        "q": "What changes each time you call your command?",
+        "options": [
+          "The number you give it, which sets how far to go.",
+          "The angle the turtle turns.",
+          "Nothing. The turtle just goes in circles."
+        ],
+        "correct": 0,
+        "why": "The input `size` holds the number you give, so one command can draw short and long lines."
+      }
+    },
+    {
+      "id": 5,
+      "tab": "Fractal",
+      "title": "Draw a snowflake fractal",
+      "tagline": "Small shapes inside big ones.",
+      "goal": "Every edge has a bump. Every bump has smaller bumps. Write a command that uses itself.",
+      "try": "try def edge size do",
+      "deck": [{ "c": "def", "new": true, "note": "a command that calls itself" }, { "c": "when", "new": true }, { "c": "fw" }, { "c": "rt" }, { "c": "lt" }, { "c": "loop" }],
+      "solution": "def edge size do\n  when size < 25 do\n    fw size\n  end\n  when size >= 25 do\n    edge size/3\n    lt 60\n    edge size/3\n    rt 120\n    edge size/3\n    lt 60\n    edge size/3\n  end\nend\n\nloop 3 do\n  edge 180\n  rt 120\nend\n",
+      "hints": [
+        "Start with a triangle made of three `edge` calls: `loop 3 do`, then `edge 180` and `rt 120`, then `end`. Then teach `edge` how to draw itself.",
+        "A bumpy edge is four smaller edges, each a third as long: edge, `lt 60`, edge, `rt 120`, edge, `lt 60`, edge. Write each one as `edge size/3`.",
+        "When the edge is short, just draw a line, or it never stops. Use `when size < 25 do fw size end`, and put the four smaller edges inside `when size >= 25 do ... end`."
+      ],
+      "quiz": {
+        "q": "What stops edge from calling itself forever?",
+        "options": [
+          "When the size is small, it draws a plain line instead.",
+          "The computer gets tired and stops.",
+          "The `end` at the bottom of the command."
+        ],
+        "correct": 0,
+        "why": "A command that calls itself needs a way to stop. Here, the first `when` draws a plain line once `size` is small enough."
+      }
+    }
+  ]
+}
